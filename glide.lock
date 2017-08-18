@@ -1,5 +1,5 @@
-hash: f07a47307563834c802ae0639116bc3cafb901efb66a48205e86460eff077694
-updated: 2017-08-16T10:08:59.739742805-04:00
+hash: 932435e901072a603f773bfbaa2b91f9df6d8af26c9e7ceccdfe90ce1c5788a6
+updated: 2017-08-18T16:42:28.191081527-04:00
 imports:
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
@@ -16,7 +16,7 @@ imports:
 - name: github.com/eapache/queue
   version: ded5959c0d4e360646dc9e9908cff48666781367
 - name: github.com/elastic/beats
-  version: ffb035697fb3f8c0718aff81d68b7f9eddc91d09
+  version: 74bfb8f9ca009480a558685e745301f0171a4511
   subpackages:
   - libbeat/beat
   - libbeat/cfgfile
@@ -118,6 +118,10 @@ imports:
 - name: github.com/Shopify/sarama
   version: f0996189c86dc27338468f2a9b10077c6d572b34
   repo: https://github.com/urso/sarama
+- name: github.com/stretchr/testify
+  version: 890a5c3458b43e6104ff5da8dfa139d013d77544
+  subpackages:
+  - assert
 - name: golang.org/x/crypto
   version: 7f7c0c2d75ebb4e32a21396ce36e87b6dadc91c9
   subpackages:
@@ -138,4 +142,8 @@ imports:
   - windows/svc/debug
 - name: gopkg.in/yaml.v2
   version: a83829b6f1293c91addabc89d0571c246397bbf4
-testImports: []
+testImports:
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib

@@ -16,3 +16,5 @@ import:
   version: 8d4984e8baccbf5bfadd7f7e366fd61b7ccac38b
 - package: github.com/lib/pq
   version: ee1442bda7bd1b6a84e913bdb421cb1874ec629d
+- package: github.com/stretchr/testify/assert
+
