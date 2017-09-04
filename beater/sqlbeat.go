@@ -95,19 +95,8 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 
 ///*** Beater interface methods ***///
 
-// Config is a function to read config file
-// func (bt *Sqlbeat) Config(b *beat.Beat) error {
 
-// 	// Load beater beatConfig
-// 	err := cfgfile.Read(&bt.config, "")
-// 	if err != nil {
-// 		return fmt.Errorf("Error reading config file: %v", err)
-// 	}
-
-// 	return nil
-// }
-
-// Setup is a function to validate
+// Setup is a function to validate config data
 func (bt *Sqlbeat) Setup(b *beat.Beat) error {
 	logp.Info(">>> Setup()")
 	// Config errors handling
