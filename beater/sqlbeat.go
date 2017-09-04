@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/elastic/beats/libbeat/beat"
-	// "github.com/elastic/beats/libbeat/cfgfile"
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/logp"
 	"github.com/elastic/beats/libbeat/publisher"
@@ -30,6 +29,7 @@ type Sqlbeat struct {
 	done            chan struct{}
 	config      		config.Config
 	client 					publisher.Client
+	connections			[]Connection
 
 	oldValues    common.MapStr
 	oldValuesAge common.MapStr
@@ -70,35 +70,31 @@ const (
 	columnTypeFloat
 )
 
+///*** Beater interface methods ***///
+
 // New Creates beater
 func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
-	logp.Info(">>> New()")
-
 	config := config.DefaultConfig
 	if err := cfg.Unpack(&config); err != nil {
 		return nil, fmt.Errorf("Error reading config file: %v", err)
 	}
 	
-	
-	logp.Info("  Config = \n%+v\n", config)
 	bt := &Sqlbeat{
 		done: make(chan struct{}),
 		config: config,
 	}
 
-	if err := bt.Setup(b); err != nil {
-		return nil, fmt.Errorf("Error validating config file: %v", err)		
+	if err := bt.setup(b); err != nil {
+		return nil, err	
 	}
 
 	return bt, nil
 }
 
-///*** Beater interface methods ***///
 
 
-// Setup is a function to validate config data
-func (bt *Sqlbeat) Setup(b *beat.Beat) error {
-	logp.Info(">>> Setup()")
+// Setup is an internal function to validate config data
+func (bt *Sqlbeat) setup(b *beat.Beat) error {
 	// Config errors handling
 	switch bt.config.DBType {
 	case dbtMSSQL, dbtMySQL, dbtPSQL:
@@ -178,7 +174,6 @@ func (bt *Sqlbeat) Run(b *beat.Beat) error {
 	logp.Info("sqlbeat is running! Hit CTRL-C to stop it.")
 
 	bt.client = b.Publisher.Connect()
-	logp.Info("Connected; ticker period is %v", bt.config.Period)
 	ticker := time.NewTicker(bt.config.Period)
 	for {
 		select {
@@ -194,36 +189,24 @@ func (bt *Sqlbeat) Run(b *beat.Beat) error {
 	}
 }
 
-
 // Stop is a function that runs once the beat is stopped
 func (bt *Sqlbeat) Stop() {
 	bt.client.Close()
 	close(bt.done)
 }
 
-///*** sqlbeat methods ***///
+///*** sqlbeat internal methods ***///
 
 // beat is a function that iterate over the query array, generate and publish events
 func (bt *Sqlbeat) beat(b *beat.Beat) error {
 
-	connString := ""
-
-	switch bt.config.DBType {
-	case dbtMSSQL:
-		connString = fmt.Sprintf("server=%v;user id=%v;password=%v;port=%v;database=%v",
-			bt.config.Hostname, bt.config.Username, bt.config.Password, bt.config.Port, bt.config.Database)
-
-	case dbtMySQL:
-		connString = fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
-			bt.config.Username, bt.config.Password, bt.config.Hostname, bt.config.Port, bt.config.Database)
-
-	case dbtPSQL:
-		connString = fmt.Sprintf("%v://%v:%v@%v:%v/%v?sslmode=%v",
-			dbtPSQL, bt.config.Username, bt.config.Password, bt.config.Hostname, bt.config.Port, bt.config.Database, bt.config.PostgresSSLMode)
-	}
+	connString := getConnectionString(bt.config.DBType, bt.config.Hostname, 
+		bt.config.Username, bt.config.Password, bt.config.Port, bt.config.Database, 
+		bt.config.PostgresSSLMode)
 
 	db, err := sql.Open(bt.config.DBType, connString)
 	if err != nil {
+		logp.Info("sql.open(%v) failed: %v",connString, err)
 		return err
 	}
 	defer db.Close()
@@ -235,6 +218,9 @@ LoopQueries:
 	for index, queryStr := range bt.config.Queries {
 		// Log the query run time and run the query
 		dtNow := time.Now()
+		results := 0
+
+		logp.Debug("sqlbeat","\n******\nRunning query: %v\n********\n", queryStr)
 		rows, err := db.Query(queryStr)
 		if err != nil {
 			return err
@@ -244,6 +230,17 @@ LoopQueries:
 		columns, err := rows.Columns()
 		if err != nil {
 			return err
+		}
+
+		cts, err := rows.ColumnTypes()
+		if err != nil {
+			logp.Debug("sqlbeat", "Error from rows.ColumnTypes(): %v", err)
+			return err
+		}
+
+		for i, ct := range cts {
+			isNullable, _ := ct.Nullable()
+			logp.Debug("sqlbeat","\n  Col %v: %v, %v, %v, %v\n", i, ct.Name(), ct.DatabaseTypeName(), ct.ScanType(), isNullable)
 		}
 
 		// Populate the two-columns event
@@ -256,6 +253,7 @@ LoopQueries:
 
 	LoopRows:
 		for rows.Next() {
+			results++
 
 			switch bt.config.QueryTypes[index] {
 			case queryTypeSingleRow, queryTypeSlaveDelay:
@@ -265,9 +263,12 @@ LoopQueries:
 				if err != nil {
 					logp.Err("Query #%v error generating event from rows: %v", index, err)
 				} else if event != nil {
-					// b.Events.PublishEvent(event)
-					bt.client.PublishEvent(event)
-					logp.Info("%v event sent", bt.config.QueryTypes[index])
+					ok := bt.client.PublishEvent(event, publisher.Sync, publisher.Guaranteed)
+					if ok {
+						logp.Info("%v event sent", bt.config.QueryTypes[index])
+					} else {
+						logp.Info("*** Error Return value from PublishEvent()")
+					}
 				}
 				// breaking after the first row
 				break LoopRows
@@ -275,14 +276,15 @@ LoopQueries:
 			case queryTypeMultipleRows:
 				// Generate an event from the current row
 				event, err := bt.generateEventFromRow(rows, columns, bt.config.QueryTypes[index], dtNow)
-
 				if err != nil {
-					logp.Err("Query #%v error generating event from rows: %v", index, err)
 					break LoopRows
 				} else if event != nil {
-					// b.Events.PublishEvent(event)
-					bt.client.PublishEvent(event)
-					logp.Info("%v event sent", bt.config.QueryTypes[index])
+					ok := bt.client.PublishEvent(event)
+					if ok {
+						logp.Info("%v event sent", bt.config.QueryTypes[index])
+					} else {
+						logp.Info("*** Error Return value from PublishEvent()")
+					}
 				}
 
 				// Move to the next row
@@ -304,9 +306,19 @@ LoopQueries:
 
 		// If the two-columns event has data, publish it
 		if bt.config.QueryTypes[index] == queryTypeTwoColumns && len(twoColumnEvent) > 2 {
-			bt.client.PublishEvent(twoColumnEvent)
-			logp.Info("%v event sent", queryTypeTwoColumns)
+			ok := bt.client.PublishEvent(twoColumnEvent)
+			if ok {
+				logp.Info("**********\n2cevent is: %v", twoColumnEvent)
+			} else {
+				logp.Info("*** Error Return value from PublishEvent() for %v", twoColumnEvent)
+			}
 			twoColumnEvent = nil
+		}
+
+		if results == 0 {
+			logp.Info("No results for query %v", index)
+		} else {
+			logp.Debug("sqlbeat","Output %v results for query %v", results, index)
 		}
 
 		rows.Close()
@@ -320,6 +332,25 @@ LoopQueries:
 	return nil
 }
 
+func getConnectionString(dbType string, hostname string, username string, password string, port string, database string, postgresSSLMode string) string {
+	connString := ""
+
+	switch dbType {
+	case dbtMSSQL:
+		connString = fmt.Sprintf("server=%v;user id=%v;password=%v;port=%v;database=%v",
+			hostname, username, password, port, database)
+
+	case dbtMySQL:
+		connString = fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
+			username, password, hostname, port, database)
+
+	case dbtPSQL:
+		connString = fmt.Sprintf("%v://%v:%v@%v:%v/%v?sslmode=%v",
+			dbtPSQL, username, password, hostname, port, database, postgresSSLMode)
+	}
+	return connString
+
+}
 // appendRowToEvent appends the two-column event the current row data
 func (bt *Sqlbeat) appendRowToEvent(event common.MapStr, row *sql.Rows, columns []string, rowAge time.Time) error {
 
@@ -441,7 +472,9 @@ func (bt *Sqlbeat) appendRowToEvent(event common.MapStr, row *sql.Rows, columns 
 func (bt *Sqlbeat) generateEventFromRow(row *sql.Rows, columns []string, queryType string, rowAge time.Time) (common.MapStr, error) {
 
 	// Make a slice for the values
-	values := make([]sql.RawBytes, len(columns))
+//	values := make([]sql.RawBytes, len(columns))
+	// scanner error comes from go_xorm/xorm/convert.go
+	values := make([]sql.NullString, len(columns))
 
 	// Copy the references into such a []interface{} for row.Scan
 	scanArgs := make([]interface{}, len(values))
@@ -458,15 +491,24 @@ func (bt *Sqlbeat) generateEventFromRow(row *sql.Rows, columns []string, queryTy
 	// Get RawBytes from data
 	err := row.Scan(scanArgs...)
 	if err != nil {
+		logp.Debug("sqlbeat","Row scan failed: %v", err)
 		return nil, err
 	}
+	logp.Debug("sqlbeat","Row scanned OK")
+	logp.Debug("sqlbeat","*** Values: %+v", values)
 
 	// Loop on all columns
 	for i, col := range values {
 		// Get column name and string value
 		strColName := string(columns[i])
-		strColValue := string(col)
+		strColValue := ""
+		if col.Valid {
+			strColValue = string(col.String)
+		} else {
+			logp.Debug("sqlbeat","** Column %v is not valid: %+v\n", i, col)
+		}
 		strColType := columnTypeString
+    logp.Debug("sqlbeat","   Col %v: %v=%v\n", i, strColName, strColValue)
 
 		// Skip column proccessing when query type is show-slave-delay and the column isn't Seconds_Behind_Master
 		if queryType == queryTypeSlaveDelay && strColName != columnNameSlaveDelay {
@@ -474,19 +516,32 @@ func (bt *Sqlbeat) generateEventFromRow(row *sql.Rows, columns []string, queryTy
 		}
 
 		// Try to parse the value to an int64
-		nColValue, err := strconv.ParseInt(strColValue, 0, 64)
+		nColValue, err := strconv.ParseInt(strings.TrimSpace(strColValue), 0, 64)
 		if err == nil {
 			strColType = columnTypeInt
 		}
 
 		// Try to parse the value to a float64
-		fColValue, err := strconv.ParseFloat(strColValue, 64)
+		fColValue, err := strconv.ParseFloat(strings.TrimSpace(strColValue), 64)
 		if err == nil {
 			// If it's not already an established int64, set type to float
 			if strColType == columnTypeString {
 				strColType = columnTypeFloat
 			}
 		}
+		// A date/timestamp from MSSQL would look like: 'YYYY-MM-DDTHH:mm:ss.dddZ'
+		
+		// for mysql, dates look like this:
+		layout := "2006-01-02 15:04:05"
+		// layout := "2006-01-02T15:04:05.000Z"
+//str := "2014-11-12T11:45:26.371Z"
+		tColValue, err := time.Parse(layout, strColValue)
+		if err == nil {
+			logp.Debug("sqltest","\n\n******************\nParsed a Date!\n%v is %v\n\n", strColValue, tColValue)
+		} else {
+			logp.Debug("sqltest","\n\n*** %v is not a date: %v\n\n", strColValue, err)
+		}
+
 
 		// If query type is single row and the column name ends with the deltaWildcard
 		if queryType == queryTypeSingleRow && strings.HasSuffix(strColName, bt.config.DeltaWildcard) {
@@ -569,6 +624,7 @@ func (bt *Sqlbeat) generateEventFromRow(row *sql.Rows, columns []string, queryTy
 		event = nil
 	}
 
+	logp.Debug("sqlbeat","Event Generated: %+v\n",event)
 	return event, nil
 }
 

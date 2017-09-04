@@ -3,11 +3,16 @@
 
 package config
 
-import "time"
+import (
+	"time"
 
+	"github.com/elastic/beats/libbeat/common"
+)
+	
 type Config struct {
 	Period            time.Duration   `config:"period"`
-	DBType            string   `config:"dbtype"`
+	Queries2					[]*common.Config `config:"queries2"`
+	DBType            string   `config:"dbtype" validate:"required"`
 	Hostname          string   `config:"hostname"`
 	Port              string   `config:"port"`
 	Username          string   `config:"username"`
