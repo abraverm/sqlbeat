@@ -9,3 +9,8 @@
 
 dev-tools/packer/build/*
 logs
+
+# Don't version template files -- they are generated via make update
+sqlbeat.template.json
+sqlbeat.template-es2x.json
+sqlbeat.template-es6x.json
