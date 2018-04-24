@@ -17,7 +17,7 @@ import (
 	"github.com/elastic/beats/libbeat/logp"
 	"github.com/elastic/beats/libbeat/publisher"
 
-	"github.com/adibendahan/sqlbeat/config"
+	"github.com/abraverm/sqlbeat/config"
 
 	// sql go drivers
 	_ "github.com/denisenkom/go-mssqldb"
@@ -27,9 +27,9 @@ import (
 
 // Sqlbeat is a struct to hold the beat config & info
 type Sqlbeat struct {
-	done            chan struct{}
-	config      		config.Config
-	client 					publisher.Client
+	done   chan struct{}
+	config config.Config
+	client publisher.Client
 
 	oldValues    common.MapStr
 	oldValuesAge common.MapStr
@@ -51,9 +51,9 @@ const (
 	dbtMSSQL = "mssql"
 	dbtPSQL  = "postgres"
 
-	defaultPortMySQL     = "3306"
-	defaultPortMSSQL     = "1433"
-	defaultPortPSQL      = "5432"
+	defaultPortMySQL = "3306"
+	defaultPortMSSQL = "1433"
+	defaultPortPSQL  = "5432"
 
 	// query types values
 	queryTypeSingleRow    = "single-row"
@@ -78,16 +78,15 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 	if err := cfg.Unpack(&config); err != nil {
 		return nil, fmt.Errorf("Error reading config file: %v", err)
 	}
-	
-	
+
 	logp.Info("  Config = \n%+v\n", config)
 	bt := &Sqlbeat{
-		done: make(chan struct{}),
+		done:   make(chan struct{}),
 		config: config,
 	}
 
 	if err := bt.Setup(b); err != nil {
-		return nil, fmt.Errorf("Error validating config file: %v", err)		
+		return nil, fmt.Errorf("Error validating config file: %v", err)
 	}
 
 	return bt, nil
@@ -152,12 +151,11 @@ func (bt *Sqlbeat) Setup(b *beat.Beat) error {
 		logp.Info("Port not selected, proceeding with '%v' as default", bt.config.Port)
 	}
 
-
 	// Handle password decryption and save in the bt
 	// if bt.config.Password != "" {
 	// 	bt.password = bt.config.Password
-	// } else 
-	 if bt.config.EncryptedPassword != "" {
+	// } else
+	if bt.config.EncryptedPassword != "" {
 		aesCipher, err := aes.NewCipher([]byte(secret))
 		if err != nil {
 			return err
@@ -204,7 +202,6 @@ func (bt *Sqlbeat) Run(b *beat.Beat) error {
 		}
 	}
 }
-
 
 // Stop is a function that runs once the beat is stopped
 func (bt *Sqlbeat) Stop() {

@@ -1,43 +1,43 @@
-sudo: required
 dist: trusty
-services:
-  - docker
-
 language: go
-
 go:
-  - 1.5.3
+  - 1.9.4
 
 os:
   - linux
-  - osx
 
 env:
   matrix:
     - TARGETS="check"
-    - TARGETS="-C sqlbeat testsuite"
-
+    - TARGETS="testsuite"
   global:
-    # Cross-compile for amd64 only to speed up testing.
-    - GOX_FLAGS="-arch amd64"
+  - GOX_FLAGS="-arch amd64"
 
 addons:
   apt:
     packages:
-      - python-virtualenv
-
+    - python-virtualenv
 before_install:
   # Redo the travis setup but with the elastic/libbeat path. This is needed so the package path is correct
-  - mkdir -p $HOME/gopath/src/github.com/elastic/beats/
-  - rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/github.com/elastic/beats/
-  - export TRAVIS_BUILD_DIR=$HOME/gopath/src/github.com/elastic/beats/
-  - cd $HOME/gopath/src/github.com/elastic/beats/
+  - mkdir -p $HOME/gopath/src/github.com/abraverm/sqlbeat
+  - rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/github.com/abraverm/sqlbeat/
+  - export TRAVIS_BUILD_DIR=$HOME/gopath/src/github.com/abraverm/sqlbeat
+  - cd $HOME/gopath/src/github.com/abraverm/sqlbeat
+  - go get github.com/Masterminds/glide
 
 install:
   - true
 
 script:
+  - make update-deps
   - make $TARGETS
 
-after_success:
-  # Copy full.cov to coverage.txt because codecov.io requires this file
+deploy:
+  provider: releases
+  api_key:
+    secure: CDt3vB8AkjbHx7K1nL3C51s5SxqQsG5cGGxnLSJLbYH0VPcCkzVEoSJcebSoHAEnNkpSk9xmhxAGpG9dgSvPgoOQ0wcaYTwQ18mSVBNYv05fq2T8ud+1ibl1XF/aJ1Cptrp2U37CoASoZVfA0SZ0wzIDMAHI/9Vs9qXNiMDeTHl9est+ZzwOLOQ4RC1d270ZPrdc2MAKlMh0adMOG1ehSa3leODj1XF2b+TUwIC1bSxtfYRwd6ewdNh89otJOZCTqs2FFBoluzZs586RVsBWjEITQZGKCuBzdTOHC62J36JMQ0LA/6vPKmqL/NfKjX6Sc9MRNRL2G9RvjtcsXXkoT4zGjIzd5aviK9VWA888Y2J/13+UbqQrQvL5fFfDohyirKc4lg9Y7dRD6DkfdcE1HSVZjBpcV6AvwIyAW+a9ThdGrt8J1R8GH9T7hRjNGjXRbdC6qQ723ESWI9lBNMSGSxZSVgB11uf1cU8eP4rc+d//x3PPO33wU4r75vKdMADPHMNthZpUN8vkSzCv6iJgYOdt9/ejpYJxclAfc/aT371k6yK6IR7oRN8PFlg7iJ+OsTZ6VX9Y/9eua3kXOFauTVrHW/XCg0zcnBXHsOAeEMcfIMvyf3YPAPsyTOxK5BhQhsVYDoCFhUuWwAKXKMNvXwfFIaGYZKWicuaXVY4aacM=
+  file: sqlbeat
+  skip_cleanup: true
+  on:
+    repo: abraverm/sqlbeat
+    tags: true

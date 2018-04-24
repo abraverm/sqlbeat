@@ -1,7 +1,5 @@
 BEAT_NAME=sqlbeat
-BEAT_PATH=github.com/adibendahan/sqlbeat
-BEAT_GOPATH=$(firstword $(subst :, ,${GOPATH}))
-BEAT_URL=https://${BEAT_PATH}
+BEAT_DIR=github.com/abraverm/sqlbeat
 SYSTEM_TESTS=false
 TEST_ENVIRONMENT=false
 ES_BEATS=./vendor/github.com/elastic/beats
@@ -16,23 +14,27 @@ PREFIX?=.
 setup: copy-vendor
 	make update
 
-# .PHONY: init
-# init:
-# 	glide update  --no-recursive
-# 	make update
-# 	git init
-
 # Copy beats into vendor directory
 .PHONY: copy-vendor
 copy-vendor:
 	mkdir -p vendor/github.com/elastic/
-	-cp -R ${BEAT_GOPATH}/src/github.com/elastic/beats vendor/github.com/elastic/
+	-cp -R ${GOPATH}/src/github.com/elastic/beats vendor/github.com/elastic/
 	rm -rf vendor/github.com/elastic/beats/.git
+
+.PHONY: update-deps
+update-deps:
+	glide update
+
 
 # This is called by the beats packer before building starts
 .PHONY: before-build
 before-build:
 
+# Checks project and source code if everything is according to standard
+.PHONY: check
+check:
+
 # Collects all dependencies and then calls update
 .PHONY: collect
 collect:
+

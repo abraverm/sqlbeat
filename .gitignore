@@ -8,3 +8,5 @@
 *.pyc
 
 dev-tools/packer/build/*
+logs/
+glide.lock
