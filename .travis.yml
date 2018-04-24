@@ -7,9 +7,6 @@ os:
   - linux
 
 env:
-  matrix:
-    - TARGETS="check"
-    - TARGETS="testsuite"
   global:
   - GOX_FLAGS="-arch amd64"
 
@@ -30,7 +27,9 @@ install:
 
 script:
   - make update-deps
-  - make $TARGETS
+  - make check
+  - make testsuite
+  - go build
 
 deploy:
   provider: releases
@@ -38,6 +37,7 @@ deploy:
     secure: CDt3vB8AkjbHx7K1nL3C51s5SxqQsG5cGGxnLSJLbYH0VPcCkzVEoSJcebSoHAEnNkpSk9xmhxAGpG9dgSvPgoOQ0wcaYTwQ18mSVBNYv05fq2T8ud+1ibl1XF/aJ1Cptrp2U37CoASoZVfA0SZ0wzIDMAHI/9Vs9qXNiMDeTHl9est+ZzwOLOQ4RC1d270ZPrdc2MAKlMh0adMOG1ehSa3leODj1XF2b+TUwIC1bSxtfYRwd6ewdNh89otJOZCTqs2FFBoluzZs586RVsBWjEITQZGKCuBzdTOHC62J36JMQ0LA/6vPKmqL/NfKjX6Sc9MRNRL2G9RvjtcsXXkoT4zGjIzd5aviK9VWA888Y2J/13+UbqQrQvL5fFfDohyirKc4lg9Y7dRD6DkfdcE1HSVZjBpcV6AvwIyAW+a9ThdGrt8J1R8GH9T7hRjNGjXRbdC6qQ723ESWI9lBNMSGSxZSVgB11uf1cU8eP4rc+d//x3PPO33wU4r75vKdMADPHMNthZpUN8vkSzCv6iJgYOdt9/ejpYJxclAfc/aT371k6yK6IR7oRN8PFlg7iJ+OsTZ6VX9Y/9eua3kXOFauTVrHW/XCg0zcnBXHsOAeEMcfIMvyf3YPAPsyTOxK5BhQhsVYDoCFhUuWwAKXKMNvXwfFIaGYZKWicuaXVY4aacM=
   file: sqlbeat
   skip_cleanup: true
+  overwrite: true
   on:
     repo: abraverm/sqlbeat
     tags: true
