@@ -1,0 +1,8 @@
+targets:
+  centos-7:
+  debian-8:
+  ubuntu-16.04:
+
+notifications:
+  recipients:
+    - abraverm@redhat.com

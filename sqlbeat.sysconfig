@@ -1,0 +1,8 @@
+# /etc/sysconfig/sqlbeat
+
+# set this to use a deterministic id for this host
+SQLBEAT_CONFIG=/etc/sqlbeat/
+SQLBEAT_LOG=/var/log/sqlbeat.log
+
+# add any extra command line options to pass the traefik binary
+EXTRA_OPTS=
