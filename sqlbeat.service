@@ -1,0 +1,14 @@
+[Unit]
+Description=SQLBeat
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=traefik
+EnvironmentFile=-/etc/sysconfig/sqlbeat
+ExecStart=/usr/bin/traefik -path.conf=${SQLBEAT_CONFIG} -path.logs=${SQLBEAT_LOG} ${EXTRA_OPTS}
+TimeoutStopSec=5s
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
