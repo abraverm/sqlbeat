@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 User=traefik
 EnvironmentFile=-/etc/sysconfig/sqlbeat
-ExecStart=/usr/bin/traefik -path.conf=${SQLBEAT_CONFIG} -path.logs=${SQLBEAT_LOG} ${EXTRA_OPTS}
+ExecStart=/usr/bin/sqlbeat -path.confg=${SQLBEAT_CONFIG} -path.logs=${SQLBEAT_LOG} ${EXTRA_OPTS}
 TimeoutStopSec=5s
 KillSignal=SIGINT
 
