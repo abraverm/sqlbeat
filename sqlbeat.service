@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 User=sqlbeat
-EnvironmentFile=/etc/sysconfig/sqlbeat
+EnvironmentFile=-/etc/sysconfig/sqlbeat
 ExecStart=/usr/bin/sqlbeat -path.config=${SQLBEAT_CONFIG} -path.logs=${SQLBEAT_LOG} ${EXTRA_OPTS}
 TimeoutStopSec=5s
 KillSignal=SIGINT
