@@ -1,3 +1,4 @@
+sudo: true
 dist: trusty
 language: go
 go:
@@ -24,6 +25,7 @@ addons:
     - python-virtualenv
 before_install:
   # Redo the travis setup but with the elastic/libbeat path. This is needed so the package path is correct
+  - sudo apt-get -qq update
   - mkdir -p $HOME/gopath/src/github.com/abraverm/sqlbeat
   - rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/github.com/abraverm/sqlbeat/
   - export TRAVIS_BUILD_DIR=$HOME/gopath/src/github.com/abraverm/sqlbeat
