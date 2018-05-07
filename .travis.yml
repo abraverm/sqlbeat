@@ -12,7 +12,7 @@ env:
   global:
   - GOX_FLAGS="-arch amd64"
   - DOCKER_IMAGE=alectolytic/rpmbuilder
-  - COPR_REPOSITORY=sqlbeat
+  - COPR_REPOSITORY=alexbmasis/sqlbeat
   - OS_ARCH=x86_64
   matrix:
   - OS_TYPE=fedora OS_DIST=fedora OS_VERSION=27
@@ -39,17 +39,7 @@ script:
   - go build
   - docker run -v ${PWD}:/sources -v ${PWD}:/output:Z  ${DOCKER_IMAGE}:${OS_TYPE}-${OS_VERSION}
 
-deploy:
-  provider: releases
-  api_key:
-    secure: CDt3vB8AkjbHx7K1nL3C51s5SxqQsG5cGGxnLSJLbYH0VPcCkzVEoSJcebSoHAEnNkpSk9xmhxAGpG9dgSvPgoOQ0wcaYTwQ18mSVBNYv05fq2T8ud+1ibl1XF/aJ1Cptrp2U37CoASoZVfA0SZ0wzIDMAHI/9Vs9qXNiMDeTHl9est+ZzwOLOQ4RC1d270ZPrdc2MAKlMh0adMOG1ehSa3leODj1XF2b+TUwIC1bSxtfYRwd6ewdNh89otJOZCTqs2FFBoluzZs586RVsBWjEITQZGKCuBzdTOHC62J36JMQ0LA/6vPKmqL/NfKjX6Sc9MRNRL2G9RvjtcsXXkoT4zGjIzd5aviK9VWA888Y2J/13+UbqQrQvL5fFfDohyirKc4lg9Y7dRD6DkfdcE1HSVZjBpcV6AvwIyAW+a9ThdGrt8J1R8GH9T7hRjNGjXRbdC6qQ723ESWI9lBNMSGSxZSVgB11uf1cU8eP4rc+d//x3PPO33wU4r75vKdMADPHMNthZpUN8vkSzCv6iJgYOdt9/ejpYJxclAfc/aT371k6yK6IR7oRN8PFlg7iJ+OsTZ6VX9Y/9eua3kXOFauTVrHW/XCg0zcnBXHsOAeEMcfIMvyf3YPAPsyTOxK5BhQhsVYDoCFhUuWwAKXKMNvXwfFIaGYZKWicuaXVY4aacM=
-  file:
-    - sqlbeat
-    - sqlbeat*.rpm
-    - sqlbeat*.srpm
-  file_glob: true
-  skip_cleanup: true
-  overwrite: true
-  on:
-    repo: abraverm/sqlbeat
-    tags: true
+after_success:
+  - pip install copr-cli simplejson
+  - openssl aes-256-cbc -K $encrypted_52ba645f9e60_key -iv $encrypted_52ba645f9e60_iv -in .copr.enc -out .copr -d
+  - if [ ! -z "${TRAVIS_TAG}" ]; then copr-cli --config .copr build -r ${OS_DIST}-${OS_VERSION}-${OS_ARCH} ${COPR_REPOSITORY} *.src.rpm; fi

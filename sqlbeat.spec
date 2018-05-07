@@ -1,7 +1,7 @@
 %define debug_package %{nil}
 
 Name:           sqlbeat
-Version:        0.1.4
+Version:        0.1.5
 Release:        1%{?dist}
 Summary:        Fully customizable Beat for MySQL/Microsoft SQL Server/PostgreSQL servers
 ExclusiveArch:  x86_64
