@@ -42,6 +42,7 @@ script:
   - docker run -v ${PWD}:/sources -v ${PWD}:/output:Z  ${DOCKER_IMAGE}:${OS_TYPE}-${OS_VERSION}
 
 after_success:
+  - pip install requests[security]
   - pip install copr-cli simplejson
   - openssl aes-256-cbc -K $encrypted_52ba645f9e60_key -iv $encrypted_52ba645f9e60_iv -in .copr.enc -out .copr -d
   - if [ ! -z "${TRAVIS_TAG}" ]; then copr-cli --config .copr build -r ${OS_DIST}-${OS_VERSION}-${OS_ARCH} ${COPR_REPOSITORY} *.src.rpm; fi
