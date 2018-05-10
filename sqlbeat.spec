@@ -1,7 +1,7 @@
 %define debug_package %{nil}
 
 Name:           sqlbeat
-Version:        0.1.5
+Version:        0.1.6
 Release:        1%{?dist}
 Summary:        Fully customizable Beat for MySQL/Microsoft SQL Server/PostgreSQL servers
 ExclusiveArch:  x86_64
@@ -30,13 +30,6 @@ install -D %{SOURCE4} %{buildroot}/%{_docdir}/%{name}/LICENSE
 %clean
 rm -rf %{buildroot}
 
-%pre
-getent group %{name} >/dev/null || groupadd -r %{name}
-getent passwd %{name} >/dev/null || \
-    useradd -r -g %{name} -d %{_sharedstatedir}/%{name} -s /sbin/nologin \
-    -c "%{name} user" %{name}
-exit 0
-
 %post
 %systemd_post %{name}.service
 
@@ -46,13 +39,14 @@ exit 0
 %files
 %defattr(-,root,root,-)
 %attr(755, root, root) %{_bindir}/%{name}
-%dir %attr(750, root, %{name}) %{_sysconfdir}/%{name}
+%dir %attr(750, root, root) %{_sysconfdir}/%{name}
 %attr(644, root, root) %{_unitdir}/%{name}.service
-%config(noreplace) %attr(640, root, %{name}) %{_sysconfdir}/sysconfig/%{name}
-%config(noreplace) %attr(640, root, %{name}) %{_sysconfdir}/%{name}/%{name}.yml
+%config(noreplace) %attr(640, root, root) %{_sysconfdir}/sysconfig/%{name}
+%config(noreplace) %attr(640, root, root) %{_sysconfdir}/%{name}/%{name}.yml
 %doc %{_docdir}/%{name}/LICENSE
 
 
 %changelog
+* Mon May 10 2018 Alexander Braverman Masis<alexbmasis@gmail.com> - 0.1.6
 * Mon Apr 30 2018 Alexander Braverman Masis<alexbmasis@gmail.com> - 0.1.3
 - Initial packaging
