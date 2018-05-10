@@ -13,7 +13,7 @@ env:
   global:
   - GOX_FLAGS="-arch amd64"
   - DOCKER_IMAGE=alectolytic/rpmbuilder
-  - COPR_REPOSITORY=alexbmasis/sqlbeat
+  - COPR_REPOSITORY=sqlbeat
   - OS_ARCH=x86_64
   matrix:
   - OS_TYPE=fedora OS_DIST=fedora OS_VERSION=27
@@ -49,4 +49,4 @@ script:
 after_success:
   - openssl aes-256-cbc -K $encrypted_52ba645f9e60_key -iv $encrypted_52ba645f9e60_iv -in .copr.enc -out .copr -d
   - copr-cli -h
-  - if [ ! -z "${TRAVIS_TAG}" ]; then copr-cli --config .copr build -r ${OS_DIST}-${OS_VERSION}-${OS_ARCH} ${COPR_REPOSITORY} *.src.rpm; fi
+  - if [ ! -z "${TRAVIS_TAG}" ]; then copr-cli --config .copr build --nowait -r ${OS_DIST}-${OS_VERSION}-${OS_ARCH} ${COPR_REPOSITORY} *.src.rpm; fi
